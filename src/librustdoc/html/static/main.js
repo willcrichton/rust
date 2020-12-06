@@ -2824,6 +2824,84 @@ function defocusSearchBar() {
     window.onhashchange = onHashChange;
 
     buildHelperPopup();
+
+    var open_method_search_button = document.getElementById('open-method-search');
+    if (open_method_search_button) {
+        open_method_search_button.addEventListener('click', function() {
+            var all_methods = window.SEARCHABLE_METHODS;
+            var method_search_window = document.getElementById('method-search-window');
+
+            var expand = false;
+            var display_type = 'types';
+
+            function render() {
+                method_search_window.style.display = 'block';
+                method_search_window.className = expand ? 'expand' : '';
+
+                var header = ("<div>" + 
+                  "<span>" + 
+                    'Just types <input type="radio" selected name="method-type" value="types" /> &nbsp;' +
+                    'Types and names <input type="radio" name="method-type" value="names" /> &nbsp;' + 
+                    'Full <input type="radio" name="method-type" value="full" />' +
+                  "</span>" + 
+                  "<span style='float: right'>" + 
+                    "<a href='#' id='method-expand'>Expand</a>" + 
+                  "</span>" + 
+                "</div>");
+                method_search_window.innerHTML = header;
+
+                var radios = method_search_window.querySelectorAll('input[type=radio]');
+                radios.forEach(function(radio) {
+                    radio.addEventListener('change', function(e) {
+                        display_type = e.target.value;
+                        render();
+                    });
+                });
+
+                var method_expand = method_search_window.querySelector('#method-expand');
+                method_expand.addEventListener('click', function() {
+                    expand = !expand;
+                    render();
+                });
+
+                function render_method(method) {
+                    var method_div = document.createElement('div');
+                    method_div.className = 'searchable-method';            
+                    var input = 
+                      display_type == 'types' 
+                      ? method.arg_types
+                      : (display_type == 'names'
+                          ? method.name + method.arg_types
+                          : method.name + method.arg_names);
+                    method_div.innerHTML = 
+                        '<div class="inputs io-column"><code>' + input + '</code></div>' + 
+                        '<div class="outputs io-column"><code>' + method.return_type + '</code></div>';                    
+                    return method_div;
+                }
+   
+                var self_types = ['&amp;self', '&amp;mut self', 'static'];
+                if (expand) {
+                    self_types.forEach(function(self_type) {
+                        var column = document.createElement('div');
+                        column.className = 'method-column';
+                        column.innerHTML += '<h2><code>' + self_type + '</code></h2>';                        
+                        var cur_methods = all_methods
+                            .filter(function(method) { return method.self_type == self_type });
+                        cur_methods.forEach(function(method) {
+                            column.appendChild(render_method(method));
+                        });
+                        method_search_window.appendChild(column);
+                    });
+                } else {
+                    all_methods.forEach(function(method) {
+                        method_search_window.appendChild(render_method(method));               
+                    });
+                }
+            }
+            
+            render()
+        });  
+    }
 }());
 
 // This is required in firefox. Explanations: when going back in the history, firefox doesn't re-run

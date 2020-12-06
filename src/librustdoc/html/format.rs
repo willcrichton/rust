@@ -975,11 +975,75 @@ impl clean::FnDecl {
     }
 }
 
+impl clean::SelfTy {
+    crate fn print(&self) -> impl fmt::Display + '_ {
+        display_fn(move |f| {
+            let amp = if f.alternate() { "&" } else { "&amp;" };
+            match *self {
+                clean::SelfValue => {
+                    write!(f, "self")
+                }
+                clean::SelfBorrowed(Some(ref lt), mtbl) => {
+                    write!(f,
+                        "{}{} {}self",
+                        amp,
+                        lt.print(),
+                        mtbl.print_with_space()
+                    )
+                }
+                clean::SelfBorrowed(None, mtbl) => {
+                    write!(f, "{}{}self", amp, mtbl.print_with_space())
+                }
+                clean::SelfExplicit(ref typ) => {
+                    if f.alternate() {
+                        write!(f, "self: {:#}", typ.print())
+                    } else {
+                        write!(f, "self: {}", typ.print())
+                    }
+                }
+            }
+        })
+    }
+
+    crate fn print_plain(&self) -> impl fmt::Display + '_ {
+        display_fn(move |f| match *self {            
+            clean::SelfValue => {
+                write!(f, "self")
+            }
+            clean::SelfBorrowed(Some(ref lt), mtbl) => {
+                write!(f,
+                    "&{} {}self",
+                    lt.print(),
+                    mtbl.print_with_space()
+                )
+            }
+            clean::SelfBorrowed(None, mtbl) => {
+                write!(f, "&{}self", mtbl.print_with_space())
+            }
+            clean::SelfExplicit(ref typ) => {
+                write!(f, "self: {:#}", typ.print())
+            }
+        })
+    }
+}
+
+// impl clean::Argument {
+//     crate fn print(&self) -> impl fmt::Display + '_ {
+//         display_fn(move |f| {
+//             if !self.name.is_empty() {
+//                 write!(f, "{}: ", self.name)?;
+//             }
+
+//             write!(f, "{}", self.type_.print())           
+//         })
+//     }
+// }
+
 impl Function<'_> {
     crate fn print(&self) -> impl fmt::Display + '_ {
         display_fn(move |f| {
             let &Function { decl, header_len, indent, asyncness } = self;
-            let amp = if f.alternate() { "&" } else { "&amp;" };
+            //let amp = if f.alternate() { "&" } else { "&amp;" };
             let mut args = String::new();
             let mut args_plain = String::new();
             for (i, input) in decl.inputs.values.iter().enumerate() {
@@ -988,37 +1052,8 @@ impl Function<'_> {
                 }
 
                 if let Some(selfty) = input.to_self() {
-                    match selfty {
-                        clean::SelfValue => {
-                            args.push_str("self");
-                            args_plain.push_str("self");
-                        }
-                        clean::SelfBorrowed(Some(ref lt), mtbl) => {
-                            args.push_str(&format!(
-                                "{}{} {}self",
-                                amp,
-                                lt.print(),
-                                mtbl.print_with_space()
-                            ));
-                            args_plain.push_str(&format!(
-                                "&{} {}self",
-                                lt.print(),
-                                mtbl.print_with_space()
-                            ));
-                        }
-                        clean::SelfBorrowed(None, mtbl) => {
-                            args.push_str(&format!("{}{}self", amp, mtbl.print_with_space()));
-                            args_plain.push_str(&format!("&{}self", mtbl.print_with_space()));
-                        }
-                        clean::SelfExplicit(ref typ) => {
-                            if f.alternate() {
-                                args.push_str(&format!("self: {:#}", typ.print()));
-                            } else {
-                                args.push_str(&format!("self: {}", typ.print()));
-                            }
-                            args_plain.push_str(&format!("self: {:#}", typ.print()));
-                        }
-                    }
+                    args.push_str(&format!("{}", selfty.print()));
+                    args_plain.push_str(&format!("{}", selfty.print_plain()));                
                 } else {
                     if i > 0 {
                         args.push_str(" <br>");

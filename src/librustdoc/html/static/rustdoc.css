@@ -1659,3 +1659,45 @@ div.name.expand::before {
 .type-decl > pre > .docblock.attributes {
 	margin-left: 4em;
 }
+
+#method-search-window {
+	position: absolute;
+	right: -370px;
+	top: 10px;
+	width: 320px;
+	display: none;
+	border: 2px solid #ccc;
+	background: white;
+	padding: 10px;
+	z-index: 1000;		
+	overflow: auto;
+}
+
+#method-search-window.expand {
+	width: 1360px;
+}
+
+.method-column {
+	float: left;
+	width: 30%;
+	margin-right: 20px;
+}
+
+.searchable-method {
+	overflow: auto;
+}
+
+.searchable-method .io-column {
+	text-indent: -30px;
+	padding-left: 30px;
+	width: 50%;
+	overflow: hidden;
+}
+
+.searchable-method .inputs {
+	float: left;
+
+}
+.searchable-method .outputs {
+	float: right;
+}

@@ -2945,7 +2945,63 @@ fn render_assoc_item(
     }
 }
 
+#[derive(Serialize)]
+struct SearchableMethod {
+    name: String,
+    arg_types: String,
+    arg_names: String,
+    return_type: String,
+    self_type: String,
+}
+
 fn item_struct(w: &mut Buffer, cx: &Context, it: &clean::Item, s: &clean::Struct) {
+
+    let c = &cx.cache;
+    let v: &Vec<Impl> = match c.impls.get(&it.def_id) {
+        Some(v) => v,
+        None => return,
+    };
+
+    write!(w, "<script>window.SEARCHABLE_METHODS = [");
+    for impl_ in v.iter() {
+        let items = &impl_.inner_impl().items;
+        for item in items {
+            match &item.inner {
+                clean::MethodItem(clean::Method { decl, .. }) => {
+                    let inputs = &decl.inputs.values;
+                    let name = item.name.clone().unwrap();
+
+                    let self_type = 
+                        decl.self_type().map(|s| format!("{}", s.print()))
+                        .unwrap_or("static".into());
+
+                    let arg_types = format!(
+                        "({})",
+                        inputs.iter().map(|arg| arg.type_.print()).join(", "),
+                    );
+
+                    let arg_names = format!(
+                        "({})",
+                        inputs.iter().map(|arg| format!("{}: {}", arg.name, arg.type_.print())).join(",\n")
+                    );
+
+                    let return_type = format!("{}", decl.output.print());
+                    
+                    let method = SearchableMethod { 
+                        name, arg_types, arg_names, return_type, self_type
+                    };
+                    write!(w, "{},", serde_json::to_string(&method).unwrap());
+                },
+                _ => {}
+            }
+        }
+        //let item = &impl_.impl_item;
+        //write!(w, "<div>{:?}</div>", item);
+    }
+    write!(w, "]</script>");
+    write!(w, "<a href='#' id='open-method-search'>Open method search</a>");
+    write!(w, "<div id='method-search-window'></div>");
+
     wrap_into_docblock(w, |w| {
         write!(w, "<pre class='rust struct'>");
         render_attributes(w, it, true);
@@ -4111,7 +4167,7 @@ fn sidebar_assoc_items(it: &clean::Item) -> String {
                 // We want links' order to be reproducible so we don't use unstable sort.
                 ret.sort();
                 out.push_str(&format!(
-                    "<a class=\"sidebar-title\" href=\"#implementations\">Methods</a>\
+                    "<a class=\"sidebar-title\" href=\"#implementations\">Methods!</a>\
                      <div class=\"sidebar-links\">{}</div>",
                     ret.join("")
                 ));
