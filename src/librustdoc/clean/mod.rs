@@ -913,9 +913,10 @@ fn clean_fn_or_proc_macro(
         None => {
             let mut func = (sig, generics, body_id).clean(cx);
             let def_id = cx.tcx.hir().local_def_id(item.hir_id).to_def_id();
-            let key = cx.tcx.def_path_str(def_id);
+            let key =
+                format!("{}::{}", cx.tcx.crate_name(LOCAL_CRATE), cx.tcx.def_path_str(def_id));
             if let Some(call_locations) = cx.render_options.call_locations.as_ref() {
-                println!("{}, {:?}", key, call_locations.get(&key));
+                func.call_locations = call_locations.get(&key).cloned();
             }
             func.header.constness =
                 if is_const_fn(cx.tcx, def_id) && is_unstable_const_fn(cx.tcx, def_id).is_none() {

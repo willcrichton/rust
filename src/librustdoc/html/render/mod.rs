@@ -2417,8 +2417,11 @@ fn item_function(w: &mut Buffer, cx: &Context, it: &clean::Item, f: &clean::Func
             .print(),
         spotlight = spotlight_decl(&f.decl),
     );
-    println!("{:?}", f.call_locations);
-    write!(w, "<strong>TEST!</strong>");
+    if let Some(call_locations) = f.call_locations.as_ref() {
+        for (file, _locs) in call_locations {
+            write!(w, "<strong>{}</strong>", file);
+        }
+    }
     document(w, cx, it, None)
 }
 
