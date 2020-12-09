@@ -2417,6 +2417,8 @@ fn item_function(w: &mut Buffer, cx: &Context, it: &clean::Item, f: &clean::Func
             .print(),
         spotlight = spotlight_decl(&f.decl),
     );
+    println!("{:?}", f.call_locations);
+    write!(w, "<strong>TEST!</strong>");
     document(w, cx, it, None)
 }
 

@@ -51,8 +51,8 @@ extern crate rustc_middle;
 extern crate rustc_mir;
 extern crate rustc_parse;
 extern crate rustc_resolve;
-extern crate rustc_session;
 extern crate rustc_serialize;
+extern crate rustc_session;
 extern crate rustc_span as rustc_span;
 extern crate rustc_target;
 extern crate rustc_trait_selection;
@@ -428,9 +428,7 @@ fn opts() -> Vec<RustcOptGroup> {
             )
         }),
         unstable("check", |o| o.optflag("", "check", "Run rustdoc checks")),
-        stable("call-locations", |o| {
-          o.optflag("", "call-locations", "", "TODO")
-        })
+        stable("call-locations", |o| o.optopt("", "call-locations", "TODO", "PATH")),
     ]
 }
 

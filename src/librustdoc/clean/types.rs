@@ -1004,6 +1004,7 @@ crate struct Function {
     crate header: hir::FnHeader,
     crate all_types: Vec<(Type, TypeKind)>,
     crate ret_types: Vec<(Type, TypeKind)>,
+    crate call_locations: Option<FxHashMap<String, Vec<(usize, usize)>>>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]

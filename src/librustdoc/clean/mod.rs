@@ -913,6 +913,10 @@ fn clean_fn_or_proc_macro(
         None => {
             let mut func = (sig, generics, body_id).clean(cx);
             let def_id = cx.tcx.hir().local_def_id(item.hir_id).to_def_id();
+            let key = cx.tcx.def_path_str(def_id);
+            if let Some(call_locations) = cx.render_options.call_locations.as_ref() {
+                println!("{}, {:?}", key, call_locations.get(&key));
+            }
             func.header.constness =
                 if is_const_fn(cx.tcx, def_id) && is_unstable_const_fn(cx.tcx, def_id).is_none() {
                     hir::Constness::Const
@@ -929,7 +933,14 @@ impl<'a> Clean<Function> for (&'a hir::FnSig<'a>, &'a hir::Generics<'a>, hir::Bo
         let (generics, decl) =
             enter_impl_trait(cx, || (self.1.clean(cx), (&*self.0.decl, self.2).clean(cx)));
         let (all_types, ret_types) = get_all_types(&generics, &decl, cx);
-        Function { decl, generics, header: self.0.header, all_types, ret_types }
+        Function {
+            decl,
+            generics,
+            header: self.0.header,
+            all_types,
+            ret_types,
+            call_locations: None,
+        }
     }
 }
 
@@ -1083,8 +1094,14 @@ impl Clean<Item> for hir::TraitItem<'_> {
                         (self.generics.clean(cx), (&*sig.decl, &names[..]).clean(cx))
                     });
                     let (all_types, ret_types) = get_all_types(&generics, &decl, cx);
-                    let mut t =
-                        Function { header: sig.header, decl, generics, all_types, ret_types };
+                    let mut t = Function {
+                        header: sig.header,
+                        decl,
+                        generics,
+                        all_types,
+                        ret_types,
+                        call_locations: None,
+                    };
                     if t.header.constness == hir::Constness::Const
                         && is_unstable_const_fn(cx.tcx, local_did).is_some()
                     {
@@ -1196,6 +1213,7 @@ impl Clean<Item> for ty::AssocItem {
                             },
                             all_types,
                             ret_types,
+                            call_locations: None,
                         },
                         defaultness,
                     )
@@ -1211,6 +1229,7 @@ impl Clean<Item> for ty::AssocItem {
                         },
                         all_types,
                         ret_types,
+                        call_locations: None,
                     })
                 }
             }
@@ -2295,6 +2314,7 @@ impl Clean<Item> for (&hir::ForeignItem<'_>, Option<Symbol>) {
                         },
                         all_types,
                         ret_types,
+                        call_locations: None,
                     })
                 }
                 hir::ForeignItemKind::Static(ref ty, mutability) => ForeignStaticItem(Static {

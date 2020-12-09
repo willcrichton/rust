@@ -218,6 +218,7 @@ fn build_external_function(cx: &DocContext<'_>, did: DefId) -> clean::Function {
         header: hir::FnHeader { unsafety: sig.unsafety(), abi: sig.abi(), constness, asyncness },
         all_types,
         ret_types,
+        call_locations: None,
     }
 }
 

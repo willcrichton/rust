@@ -122,8 +122,6 @@ crate struct Options {
     /// default to loading from $sysroot/bin/rustc.
     crate test_builder: Option<PathBuf>,
 
-    pub call_locations: Option<PathBuf>,
-
     // Options that affect the documentation process
     /// The selected default set of passes to use.
     ///
@@ -195,6 +193,8 @@ impl fmt::Debug for Options {
     }
 }
 
+crate type CallLocations = FxHashMap<String, FxHashMap<String, Vec<(usize, usize)>>>;
+
 /// Configuration options for the HTML page-creation process.
 #[derive(Clone, Debug)]
 crate struct RenderOptions {
@@ -260,6 +260,7 @@ crate struct RenderOptions {
     /// Document items that have `doc(hidden)`.
     crate document_hidden: bool,
     crate unstable_features: rustc_feature::UnstableFeatures,
+    crate call_locations: Option<CallLocations>,
 }
 
 /// Temporary storage for data obtained during `RustdocVisitor::clean()`.
@@ -589,8 +590,12 @@ impl Options {
         let document_private = matches.opt_present("document-private-items");
         let document_hidden = matches.opt_present("document-hidden-items");
         let run_check = matches.opt_present("check");
-        let call_locations = matches.opt_str("call-locations").map(PathBuf::from);
         let (lint_opts, describe_lints, lint_cap) = get_cmd_lint_options(matches, error_format);
+
+        let call_locations = matches.opt_str("call-locations").map(|path| {
+            let json_data = std::fs::read_to_string(path).unwrap();
+            rustc_serialize::json::decode(&json_data).unwrap()
+        });
 
         Ok(Options {
             input,
@@ -624,7 +629,6 @@ impl Options {
             enable_per_target_ignores,
             test_builder,
             run_check,
-            call_locations,
             render_options: RenderOptions {
                 output,
                 external_html,
@@ -646,6 +650,7 @@ impl Options {
                 generate_search_filter,
                 document_private,
                 document_hidden,
+                call_locations,
                 unstable_features: rustc_feature::UnstableFeatures::from_environment(
                     crate_name.as_deref(),
                 ),
