@@ -23,6 +23,7 @@ use rustc_session::Session;
 use rustc_span::source_map;
 use rustc_span::symbol::sym;
 use rustc_span::DUMMY_SP;
+use rustc_serialize::json;
 
 use std::cell::{Cell, RefCell};
 use std::mem;
@@ -37,6 +38,7 @@ use crate::passes::{self, Condition::*, ConditionalPass};
 crate use rustc_session::config::{DebuggingOptions, Input, Options};
 
 crate type ExternalPaths = FxHashMap<DefId, (Vec<String>, clean::TypeKind)>;
+crate type CallLocations = FxHashMap<String, FxHashMap<String, Vec<(usize, usize)>>>;
 
 crate struct DocContext<'tcx> {
     crate tcx: TyCtxt<'tcx>,
@@ -75,6 +77,7 @@ crate struct DocContext<'tcx> {
     /// See `collect_intra_doc_links::traits_implemented_by` for more details.
     /// `map<module, set<trait>>`
     crate module_trait_cache: RefCell<FxHashMap<DefId, FxHashSet<DefId>>>,
+    crate call_locations: Option<CallLocations>
 }
 
 impl<'tcx> DocContext<'tcx> {
@@ -299,6 +302,7 @@ crate fn run_core(
         display_warnings,
         render_options,
         output_format,
+        call_locations,
         ..
     } = options;
 
@@ -529,6 +533,11 @@ fn run_global_ctxt(
     renderinfo.access_levels = access_levels;
     renderinfo.output_format = output_format;
 
+    let call_locations = call_locations.map(|path| {
+        let json_data = std::fs::read_to_string(path).unwrap();
+        json::decode(&json_data).unwrap()
+    });
+
     let mut ctxt = DocContext {
         tcx,
         resolver,
@@ -550,6 +559,7 @@ fn run_global_ctxt(
             .filter(|trait_def_id| tcx.trait_is_auto(*trait_def_id))
             .collect(),
         render_options,
+        call_locations,
         module_trait_cache: RefCell::new(FxHashMap::default()),
     };
     debug!("crate: {:?}", tcx.hir().krate());

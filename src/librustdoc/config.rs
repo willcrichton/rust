@@ -122,6 +122,8 @@ crate struct Options {
     /// default to loading from $sysroot/bin/rustc.
     crate test_builder: Option<PathBuf>,
 
+    pub call_locations: Option<PathBuf>,
+
     // Options that affect the documentation process
     /// The selected default set of passes to use.
     ///
@@ -587,7 +589,7 @@ impl Options {
         let document_private = matches.opt_present("document-private-items");
         let document_hidden = matches.opt_present("document-hidden-items");
         let run_check = matches.opt_present("check");
-
+        let call_locations = matches.opt_str("call-locations").map(PathBuf::from);
         let (lint_opts, describe_lints, lint_cap) = get_cmd_lint_options(matches, error_format);
 
         Ok(Options {
@@ -622,6 +624,7 @@ impl Options {
             enable_per_target_ignores,
             test_builder,
             run_check,
+            call_locations,
             render_options: RenderOptions {
                 output,
                 external_html,
