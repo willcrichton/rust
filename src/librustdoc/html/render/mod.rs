@@ -64,7 +64,7 @@ use serde::ser::SerializeSeq;
 use serde::{Serialize, Serializer};
 
 use crate::clean::{self, AttributesExt, Deprecation, GetDefId, RenderedLink, SelfTy, TypeKind};
-use crate::config::{RenderInfo, RenderOptions};
+use crate::config::{FnCallLocations, RenderInfo, RenderOptions};
 use crate::docfs::{DocFS, PathError};
 use crate::doctree;
 use crate::error::Error;
@@ -2417,11 +2417,7 @@ fn item_function(w: &mut Buffer, cx: &Context, it: &clean::Item, f: &clean::Func
             .print(),
         spotlight = spotlight_decl(&f.decl),
     );
-    if let Some(call_locations) = f.call_locations.as_ref() {
-        for (file, _locs) in call_locations {
-            write!(w, "<strong>{}</strong>", file);
-        }
-    }
+    render_call_locations(w, &f.call_locations);
     document(w, cx, it, None)
 }
 
@@ -2925,6 +2921,14 @@ fn render_stability_since(w: &mut Buffer, item: &clean::Item, containing_item: &
     )
 }
 
+fn render_call_locations(w: &mut Buffer, call_locations: &Option<FnCallLocations>) {
+    if let Some(call_locations) = call_locations.as_ref() {
+        for (file, _locs) in call_locations {
+            write!(w, "<strong>{}</strong>", file);
+        }
+    }
+}
+
 fn render_assoc_item(
     w: &mut Buffer,
     item: &clean::Item,
@@ -2939,6 +2943,7 @@ fn render_assoc_item(
         d: &clean::FnDecl,
         link: AssocItemLink<'_>,
         parent: ItemType,
+        call_locations: &Option<FnCallLocations>,
     ) {
         let name = meth.name.as_ref().unwrap();
         let anchor = format!("#{}.{}", meth.type_(), name);
@@ -2993,13 +2998,16 @@ fn render_assoc_item(
             decl = Function { decl: d, header_len, indent, asyncness: header.asyncness }.print(),
             spotlight = spotlight_decl(&d),
             where_clause = WhereClause { gens: g, indent, end_newline }
-        )
+        );
+        render_call_locations(w, call_locations);
     }
     match item.kind {
         clean::StrippedItem(..) => {}
-        clean::TyMethodItem(ref m) => method(w, item, m.header, &m.generics, &m.decl, link, parent),
+        clean::TyMethodItem(ref m) => {
+            method(w, item, m.header, &m.generics, &m.decl, link, parent, &m.call_locations)
+        }
         clean::MethodItem(ref m, _) => {
-            method(w, item, m.header, &m.generics, &m.decl, link, parent)
+            method(w, item, m.header, &m.generics, &m.decl, link, parent, &m.call_locations)
         }
         clean::AssocConstItem(ref ty, ref default) => assoc_const(
             w,

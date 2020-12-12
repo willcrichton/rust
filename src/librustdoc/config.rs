@@ -193,7 +193,8 @@ impl fmt::Debug for Options {
     }
 }
 
-crate type CallLocations = FxHashMap<String, FxHashMap<String, Vec<(usize, usize)>>>;
+crate type FnCallLocations = FxHashMap<String, Vec<(usize, usize)>>;
+crate type AllCallLocations = FxHashMap<String, FnCallLocations>;
 
 /// Configuration options for the HTML page-creation process.
 #[derive(Clone, Debug)]
@@ -260,7 +261,7 @@ crate struct RenderOptions {
     /// Document items that have `doc(hidden)`.
     crate document_hidden: bool,
     crate unstable_features: rustc_feature::UnstableFeatures,
-    crate call_locations: Option<CallLocations>,
+    crate call_locations: Option<AllCallLocations>,
 }
 
 /// Temporary storage for data obtained during `RustdocVisitor::clean()`.

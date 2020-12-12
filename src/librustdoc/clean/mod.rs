@@ -864,6 +864,20 @@ impl<'a, 'tcx> Clean<Generics> for (&'a ty::Generics, ty::GenericPredicates<'tcx
     }
 }
 
+impl Function {
+    fn load_call_locations(&mut self, def_id: hir::def_id::DefId, cx: &DocContext<'_>) {
+        let key = format!(
+            "{}{}",
+            cx.tcx.crate_name(def_id.krate),
+            cx.tcx.def_path(def_id).to_string_no_crate_verbose()
+        );
+        if let Some(call_locations) = cx.render_options.call_locations.as_ref() {
+            self.call_locations = call_locations.get(&key).cloned();
+            debug!("call_locations: {} -- {:?}", key, self.call_locations);
+        }
+    }
+}
+
 fn clean_fn_or_proc_macro(
     item: &hir::Item<'_>,
     sig: &'a hir::FnSig<'a>,
@@ -913,14 +927,7 @@ fn clean_fn_or_proc_macro(
         None => {
             let mut func = (sig, generics, body_id).clean(cx);
             let def_id = cx.tcx.hir().local_def_id(item.hir_id).to_def_id();
-            let key = format!(
-                "{}{}",
-                cx.tcx.crate_name(def_id.krate),
-                cx.tcx.def_path(def_id).to_string_no_crate_verbose()
-            );
-            if let Some(call_locations) = cx.render_options.call_locations.as_ref() {
-                func.call_locations = call_locations.get(&key).cloned();
-            }
+            func.load_call_locations(def_id, cx);
             func.header.constness =
                 if is_const_fn(cx.tcx, def_id) && is_unstable_const_fn(cx.tcx, def_id).is_none() {
                     hir::Constness::Const
@@ -937,14 +944,16 @@ impl<'a> Clean<Function> for (&'a hir::FnSig<'a>, &'a hir::Generics<'a>, hir::Bo
         let (generics, decl) =
             enter_impl_trait(cx, || (self.1.clean(cx), (&*self.0.decl, self.2).clean(cx)));
         let (all_types, ret_types) = get_all_types(&generics, &decl, cx);
-        Function {
+        let mut function = Function {
             decl,
             generics,
             header: self.0.header,
             all_types,
             ret_types,
             call_locations: None,
-        }
+        };
+        function.load_call_locations(self.2.hir_id.owner.to_def_id(), cx);
+        function
     }
 }
 
@@ -1205,24 +1214,23 @@ impl Clean<Item> for ty::AssocItem {
                         ty::ImplContainer(_) => Some(self.defaultness),
                         ty::TraitContainer(_) => None,
                     };
-                    MethodItem(
-                        Function {
-                            generics,
-                            decl,
-                            header: hir::FnHeader {
-                                unsafety: sig.unsafety(),
-                                abi: sig.abi(),
-                                constness,
-                                asyncness,
-                            },
-                            all_types,
-                            ret_types,
-                            call_locations: None,
+                    let mut function = Function {
+                        generics,
+                        decl,
+                        header: hir::FnHeader {
+                            unsafety: sig.unsafety(),
+                            abi: sig.abi(),
+                            constness,
+                            asyncness,
                         },
-                        defaultness,
-                    )
+                        all_types,
+                        ret_types,
+                        call_locations: None,
+                    };
+                    function.load_call_locations(self.def_id, cx);
+                    MethodItem(function, defaultness)
                 } else {
-                    TyMethodItem(Function {
+                    let mut function = Function {
                         generics,
                         decl,
                         header: hir::FnHeader {
@@ -1234,7 +1242,9 @@ impl Clean<Item> for ty::AssocItem {
                         all_types,
                         ret_types,
                         call_locations: None,
-                    })
+                    };
+                    function.load_call_locations(self.def_id, cx);
+                    TyMethodItem(function)
                 }
             }
             ty::AssocKind::Type => {
