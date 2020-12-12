@@ -913,8 +913,11 @@ fn clean_fn_or_proc_macro(
         None => {
             let mut func = (sig, generics, body_id).clean(cx);
             let def_id = cx.tcx.hir().local_def_id(item.hir_id).to_def_id();
-            let key =
-                format!("{}::{}", cx.tcx.crate_name(LOCAL_CRATE), cx.tcx.def_path_str(def_id));
+            let key = format!(
+                "{}{}",
+                cx.tcx.crate_name(def_id.krate),
+                cx.tcx.def_path(def_id).to_string_no_crate_verbose()
+            );
             if let Some(call_locations) = cx.render_options.call_locations.as_ref() {
                 func.call_locations = call_locations.get(&key).cloned();
             }
