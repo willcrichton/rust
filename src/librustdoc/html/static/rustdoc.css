@@ -1721,3 +1721,40 @@ div.name.expand::before {
 .type-decl > pre > .docblock.attributes {
 	margin-left: 4em;
 }
+
+/* This part is for the new "examples" components */
+
+.found-example .code-wrapper {
+	display: flex; 
+	flex-direction: row; 
+	flex-wrap: wrap;
+	width: 100%;
+}
+
+.found-example .code-wrapper .line-numbers {
+	margin: 0;
+	padding: 14px 0;
+}
+
+.found-example .code-wrapper .line-numbers span {
+	padding: 0 14px;
+}
+
+.found-example .code-wrapper .example-wrap {
+	flex: 1;
+	overflow-x: auto;
+	margin-bottom: 0;
+}
+
+.found-example .code-wrapper .example-wrap pre.rust {
+	overflow-x: default;
+	width: inherit;
+}
+
+.found-example .line-numbers span.highlight {
+	background: yellow;
+}
+
+.found-example .example-wrap .rust span.highlight {
+	background: yellow;
+}

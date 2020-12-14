@@ -2417,7 +2417,7 @@ fn item_function(w: &mut Buffer, cx: &Context, it: &clean::Item, f: &clean::Func
             .print(),
         spotlight = spotlight_decl(&f.decl),
     );
-    render_call_locations(w, &f.call_locations);
+    render_call_locations(w, cx, &f.call_locations);
     document(w, cx, it, None)
 }
 
@@ -2552,21 +2552,21 @@ fn item_trait(w: &mut Buffer, cx: &Context, it: &clean::Item, t: &clean::Trait, 
             // FIXME: we should be using a derived_id for the Anchors here
             write!(w, "{{\n");
             for t in &types {
-                render_assoc_item(w, t, AssocItemLink::Anchor(None), ItemType::Trait);
+                render_assoc_item(w, cx, t, AssocItemLink::Anchor(None), ItemType::Trait);
                 write!(w, ";\n");
             }
             if !types.is_empty() && !consts.is_empty() {
                 w.write_str("\n");
             }
             for t in &consts {
-                render_assoc_item(w, t, AssocItemLink::Anchor(None), ItemType::Trait);
+                render_assoc_item(w, cx, t, AssocItemLink::Anchor(None), ItemType::Trait);
                 write!(w, ";\n");
             }
             if !consts.is_empty() && !required.is_empty() {
                 w.write_str("\n");
             }
             for (pos, m) in required.iter().enumerate() {
-                render_assoc_item(w, m, AssocItemLink::Anchor(None), ItemType::Trait);
+                render_assoc_item(w, cx, m, AssocItemLink::Anchor(None), ItemType::Trait);
                 write!(w, ";\n");
 
                 if pos < required.len() - 1 {
@@ -2577,7 +2577,7 @@ fn item_trait(w: &mut Buffer, cx: &Context, it: &clean::Item, t: &clean::Trait, 
                 w.write_str("\n");
             }
             for (pos, m) in provided.iter().enumerate() {
-                render_assoc_item(w, m, AssocItemLink::Anchor(None), ItemType::Trait);
+                render_assoc_item(w, cx, m, AssocItemLink::Anchor(None), ItemType::Trait);
                 match m.kind {
                     clean::MethodItem(ref inner, _)
                         if !inner.generics.where_predicates.is_empty() =>
@@ -2620,7 +2620,7 @@ fn item_trait(w: &mut Buffer, cx: &Context, it: &clean::Item, t: &clean::Trait, 
         let item_type = m.type_();
         let id = cx.derive_id(format!("{}.{}", item_type, name));
         write!(w, "<h3 id=\"{id}\" class=\"method\"><code>", id = id,);
-        render_assoc_item(w, m, AssocItemLink::Anchor(Some(&id)), ItemType::Impl);
+        render_assoc_item(w, cx, m, AssocItemLink::Anchor(Some(&id)), ItemType::Impl);
         write!(w, "</code>");
         render_stability_since(w, m, t);
         write_srclink(cx, m, w, cache);
@@ -2921,22 +2921,50 @@ fn render_stability_since(w: &mut Buffer, item: &clean::Item, containing_item: &
     )
 }
 
-fn render_call_locations(w: &mut Buffer, call_locations: &Option<FnCallLocations>) {
+fn render_call_locations(w: &mut Buffer, cx: &Context, call_locations: &Option<FnCallLocations>) {
     if let Some(call_locations) = call_locations.as_ref() {
-        for (file, _locs) in call_locations {
-            write!(w, "<strong>{}</strong>", file);
+        write!(w, "<div class=\"docblock found-example-list\"><h1>Uses found in <code>examples/</code></h1>");
+        for (file, locs) in call_locations {
+            let mut contents = match fs::read_to_string(&file) {
+                Ok(contents) => contents,
+                Err(e) => {
+                    eprintln!("Failed to read file {}", e);
+                    return // Err(Error::new(e, &file));
+                    }
+            };
+            // Remove the utf-8 BOM if any
+            if contents.starts_with('\u{feff}') {
+                contents.drain(..3);
+            }
+
+            write!(w, "<div class=\"found-example\" data-code=\"{}\" data-locs=\"{}\">{}<div class=\"code-wrapper\">",
+                contents.replace("\"", "&quot;"),
+                serde_json::to_string(&locs).unwrap(),
+                MarkdownHtml(
+                    &format!("**{}**\n\n", file),
+                    &mut cx.id_map.borrow_mut(),
+                    cx.shared.codes,
+                    cx.shared.edition,
+                    &cx.shared.playground,
+                ).into_string()
+            );
+            sources::print_src(w, contents);
+            write!(w, "</div></div>");
         }
+        write!(w, "</div>");
     }
 }
 
 fn render_assoc_item(
     w: &mut Buffer,
+    cx: &Context,
     item: &clean::Item,
     link: AssocItemLink<'_>,
     parent: ItemType,
 ) {
     fn method(
         w: &mut Buffer,
+        cx: &Context,
         meth: &clean::Item,
         header: hir::FnHeader,
         g: &clean::Generics,
@@ -2999,15 +3027,15 @@ fn render_assoc_item(
             spotlight = spotlight_decl(&d),
             where_clause = WhereClause { gens: g, indent, end_newline }
         );
-        render_call_locations(w, call_locations);
+        render_call_locations(w, cx, call_locations);
     }
     match item.kind {
         clean::StrippedItem(..) => {}
         clean::TyMethodItem(ref m) => {
-            method(w, item, m.header, &m.generics, &m.decl, link, parent, &m.call_locations)
+            method(w, cx, item, m.header, &m.generics, &m.decl, link, parent, &m.call_locations)
         }
         clean::MethodItem(ref m, _) => {
-            method(w, item, m.header, &m.generics, &m.decl, link, parent, &m.call_locations)
+            method(w, cx, item, m.header, &m.generics, &m.decl, link, parent, &m.call_locations)
         }
         clean::AssocConstItem(ref ty, ref default) => assoc_const(
             w,
@@ -3797,7 +3825,7 @@ fn render_impl(
                     let id = cx.derive_id(format!("{}.{}", item_type, name));
                     write!(w, "<h4 id=\"{}\" class=\"{}{}\">", id, item_type, extra_class);
                     write!(w, "<code>");
-                    render_assoc_item(w, item, link.anchor(&id), ItemType::Impl);
+                    render_assoc_item(w, cx, item, link.anchor(&id), ItemType::Impl);
                     write!(w, "</code>");
                     render_stability_since_raw(
                         w,

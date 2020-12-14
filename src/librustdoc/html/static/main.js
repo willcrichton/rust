@@ -2938,6 +2938,49 @@ function defocusSearchBar() {
 
     onHashChange(null);
     window.onhashchange = onHashChange;
+
+    function convertLocsStartsToLineOffsets(code, locs) {
+        console.log("converting locs", locs);
+        locs = locs.slice(0).sort(function(a, b) { return a[0] - b[0];});
+        console.log("locs sorted", locs);
+        var codeLines = code.split("\n");
+        var lineIndex = 0;
+        var totalOffset = 0;
+        var output = [];
+
+        while (locs.length > 0 && lineIndex < codeLines.length) {
+            var lineLength = codeLines[lineIndex].length + 1;
+            if (totalOffset + lineLength > locs[0][0]) {
+                output.push([lineIndex, locs[0][0]-totalOffset]);
+                locs.shift();
+            }
+            lineIndex++;
+            totalOffset += lineLength;
+        }
+        console.log("->", output);
+        return output;
+    }
+
+    function UpdateFoundExamples() {
+        var allExampleSets = document.getElementsByClassName('found-example-list');
+        onEach(allExampleSets, function(exampleSet) {
+            onEach(exampleSet.querySelectorAll(".found-example"), function(example) {
+                var code = example.attributes.getNamedItem("data-code").textContent;
+                var locs = JSON.parse(example.attributes.getNamedItem("data-locs").textContent);
+                locs = convertLocsStartsToLineOffsets(code, locs);
+                var litParent = example.querySelector('.example-wrap pre.rust');
+                var litHtml = litParent.innerHTML.split("\n");
+                locs.forEach(function(loc) {
+                    console.log("adding highlight to line", loc[0]);
+                    addClass(example.querySelector('.line-numbers').children[loc[0]], "highlight");
+                    litHtml[loc[0]] = '<span class="highlight">'+litHtml[loc[0]]+'</span>';
+                });
+                litParent.innerHTML = litHtml.join('\n');
+            });
+        });
+    }
+
+    UpdateFoundExamples();
 }());
 
 // This is required in firefox. Explanations: when going back in the history, firefox doesn't re-run
