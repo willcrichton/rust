@@ -1747,7 +1747,7 @@ div.name.expand::before {
 }
 
 .found-example .code-wrapper .example-wrap pre.rust {
-	overflow-x: default;
+	overflow-x: inherit;
 	width: inherit;
 }
 

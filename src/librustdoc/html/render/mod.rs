@@ -2923,35 +2923,47 @@ fn render_stability_since(w: &mut Buffer, item: &clean::Item, containing_item: &
 
 fn render_call_locations(w: &mut Buffer, cx: &Context, call_locations: &Option<FnCallLocations>) {
     if let Some(call_locations) = call_locations.as_ref() {
-        write!(w, "<div class=\"docblock found-example-list\"><h1>Uses found in <code>examples/</code></h1>");
-        for (file, locs) in call_locations {
+        let filtered_locations: Vec<_> = call_locations.iter().filter_map(|(file, locs)| {
             let mut contents = match fs::read_to_string(&file) {
                 Ok(contents) => contents,
                 Err(e) => {
                     eprintln!("Failed to read file {}", e);
-                    return // Err(Error::new(e, &file));
-                    }
+                    return None// Err(Error::new(e, &file));
+                }
             };
+            
             // Remove the utf-8 BOM if any
             if contents.starts_with('\u{feff}') {
                 contents.drain(..3);
             }
 
-            write!(w, "<div class=\"found-example\" data-code=\"{}\" data-locs=\"{}\">{}<div class=\"code-wrapper\">",
-                contents.replace("\"", "&quot;"),
-                serde_json::to_string(&locs).unwrap(),
-                MarkdownHtml(
-                    &format!("**{}**\n\n", file),
-                    &mut cx.id_map.borrow_mut(),
-                    cx.shared.codes,
-                    cx.shared.edition,
-                    &cx.shared.playground,
-                ).into_string()
-            );
-            sources::print_src(w, contents);
-            write!(w, "</div></div>");
+            let filtered_locs: Vec<_> = locs.iter().filter(|&&offsets| offsets.0 < contents.len()).collect();
+            if filtered_locs.len() > 0 {
+                Some((file, contents, filtered_locs))
+            } else {
+                None
+            }
+        }).collect();
+
+        if filtered_locations.len() > 0 {
+            write!(w, "<div class=\"docblock found-example-list\"><h1>Uses found in <code>examples/</code></h1>");
+            for (file, contents, locs) in filtered_locations {
+                write!(w, "<div class=\"found-example\" data-code=\"{}\" data-locs=\"{}\">{}<div class=\"code-wrapper\">",
+                    contents.replace("\"", "&quot;"),
+                    serde_json::to_string(&locs).unwrap(),
+                    MarkdownHtml(
+                        &format!("**{}**\n\n", file),
+                        &mut cx.id_map.borrow_mut(),
+                        cx.shared.codes,
+                        cx.shared.edition,
+                        &cx.shared.playground,
+                    ).into_string()
+                );
+                sources::print_src(w, contents);
+                write!(w, "</div></div>");
+            }
+            write!(w, "</div>");    
         }
-        write!(w, "</div>");
     }
 }
 

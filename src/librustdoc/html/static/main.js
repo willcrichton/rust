@@ -2939,48 +2939,113 @@ function defocusSearchBar() {
     onHashChange(null);
     window.onhashchange = onHashChange;
 
+    // Merge the full set of [from, to] offsets into a minimal set of non-overlapping
+    // [from, to] offsets.
+    // NB: This is such a archetypal software engineering interview question that
+    // I can't believe I actually had to write it. Yes, it's O(N) in the input length --
+    // but it does assume a sorted input!
+    function distinctRegions(locs) {
+        var start = -1;
+        var end = -1;
+        var output = [];
+        for (var i = 0; i < locs.length; i++) {
+            var loc = locs[i];
+            if (loc[0] > end) {
+                if (end > 0) {
+                    output.push([start, end]);
+                }
+                start = loc[0];
+                end = loc[1];
+            } else {
+                end = Math.max(end, loc[1]);
+            }
+        }
+        if (end > 0) {
+            output.push([start, end]);
+        }
+        return output;
+    }
+
     function convertLocsStartsToLineOffsets(code, locs) {
-        console.log("converting locs", locs);
-        locs = locs.slice(0).sort(function(a, b) { return a[0] - b[0];});
-        console.log("locs sorted", locs);
+        locs = distinctRegions(locs.slice(0).sort(function(a, b) { 
+            return a[0] === b[0] ? a[1] - b[1] : a[0] - b[0]; 
+        })); // sort by start; use end if start is equal.
         var codeLines = code.split("\n");
         var lineIndex = 0;
         var totalOffset = 0;
         var output = [];
 
         while (locs.length > 0 && lineIndex < codeLines.length) {
-            var lineLength = codeLines[lineIndex].length + 1;
-            if (totalOffset + lineLength > locs[0][0]) {
-                output.push([lineIndex, locs[0][0]-totalOffset]);
+            var lineLength = codeLines[lineIndex].length + 1; // +1 here and later is due to omitted \n
+            while (locs.length > 0 && totalOffset + lineLength > locs[0][0]) {
+                var endIndex = lineIndex;
+                var charsRemaining = locs[0][1] - totalOffset;
+                while (endIndex < codeLines.length && charsRemaining > codeLines[endIndex].length + 1) {
+                    charsRemaining -= codeLines[endIndex].length + 1;
+                    endIndex += 1;
+                }
+                output.push({from: [lineIndex, locs[0][0]-totalOffset],
+                             to: [endIndex, charsRemaining]});
                 locs.shift();
             }
             lineIndex++;
             totalOffset += lineLength;
         }
-        console.log("->", output);
         return output;
     }
 
-    function UpdateFoundExamples() {
+    // inserts str into html, *but* calculates idx by eliding anything in html that's not in raw.
+    // ideally this would work by walking the element tree...but this is "good eonough" for now.
+    function insertStrAtRawIndex(raw, html, idx, str) {
+        if (idx > raw.length) {
+            return html;
+        }
+        if (idx == raw.length) {
+            return html + str;
+        }
+        var rawIdx = 0;
+        var htmlIdx = 0;
+        while(rawIdx < idx && rawIdx < raw.length) {
+            while (raw[rawIdx] !== html[htmlIdx] && htmlIdx < html.length) {
+                htmlIdx++;
+            }
+            rawIdx++;
+            htmlIdx++;
+        }
+        return html.substring(0, htmlIdx) + str + html.substr(htmlIdx);
+    }
+
+    function updateFoundExamples() {
         var allExampleSets = document.getElementsByClassName('found-example-list');
         onEach(allExampleSets, function(exampleSet) {
             onEach(exampleSet.querySelectorAll(".found-example"), function(example) {
                 var code = example.attributes.getNamedItem("data-code").textContent;
+                var codeLines = code.split("\n");
                 var locs = JSON.parse(example.attributes.getNamedItem("data-locs").textContent);
                 locs = convertLocsStartsToLineOffsets(code, locs);
                 var litParent = example.querySelector('.example-wrap pre.rust');
                 var litHtml = litParent.innerHTML.split("\n");
-                locs.forEach(function(loc) {
-                    console.log("adding highlight to line", loc[0]);
-                    addClass(example.querySelector('.line-numbers').children[loc[0]], "highlight");
-                    litHtml[loc[0]] = '<span class="highlight">'+litHtml[loc[0]]+'</span>';
-                });
+                onEach(locs, function(loc) {
+                    for (var i = loc.from[0]; i < loc.to[0]+1; i++) {
+                        addClass(example.querySelector('.line-numbers').children[i], "highlight");
+                    }
+                    litHtml[loc.to[0]] = insertStrAtRawIndex(
+                        codeLines[loc.to[0]], 
+                        litHtml[loc.to[0]],
+                        loc.to[1],
+                        "</span>");
+                    litHtml[loc.from[0]] = insertStrAtRawIndex(
+                        codeLines[loc.from[0]],
+                        litHtml[loc.from[0]],
+                        loc.from[1],
+                        '<span class="highlight" data-loc="'+JSON.stringify(loc).replace(/"/g, "&quot;")+'">');
+                }, true); // do this backwards to avoid shifting later offsets
                 litParent.innerHTML = litHtml.join('\n');
             });
         });
     }
 
-    UpdateFoundExamples();
+    updateFoundExamples();
 }());
 
 // This is required in firefox. Explanations: when going back in the history, firefox doesn't re-run
