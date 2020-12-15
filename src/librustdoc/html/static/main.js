@@ -3039,6 +3039,7 @@ function defocusSearchBar() {
                 // find the next docblock!
                 if (hasClass(exampleSet.nextElementSibling.nextElementSibling, "docblock")) {
                     exampleSet.nextElementSibling.nextElementSibling.appendChild(exampleSet);
+                    removeClass(exampleSet, "docblock");
                 }
             }
             onEach(exampleSet.querySelectorAll(".found-example"), function(example) {

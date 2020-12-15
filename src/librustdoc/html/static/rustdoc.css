@@ -1726,6 +1726,7 @@ div.name.expand::before {
 
 .found-example:not(.expanded) .code-wrapper pre.line-numbers, .found-example:not(.expanded) .code-wrapper .example-wrap pre.rust {
 	overflow: hidden;
+	height: 240px;
 }
 
 .found-example .code-wrapper .prev {
