@@ -3015,14 +3015,38 @@ function defocusSearchBar() {
         return html.substring(0, htmlIdx) + str + html.substr(htmlIdx);
     }
 
+    function scrollToLoc(elt, loc) {
+        var wrapper = elt.querySelector(".code-wrapper");
+        var halfHeight = wrapper.offsetHeight/2;
+        var lines = elt.querySelector('.line-numbers');
+        var offsetMid = (lines.children[loc.from[0]].offsetTop + lines.children[loc.to[0]].offsetTop) / 2;
+        var scrollOffset = offsetMid - halfHeight;
+        lines.scrollTo(0, scrollOffset);
+        elt.querySelector(".rust").scrollTo(0, scrollOffset);
+    }
+
     function updateFoundExamples() {
         var allExampleSets = document.getElementsByClassName('found-example-list');
         onEach(allExampleSets, function(exampleSet) {
+            if (exampleSet.parentElement.tagName === "CODE" && 
+                exampleSet.parentElement.parentElement.tagName === "H3") {
+                    // inside a method definition? -- move around
+                    exampleSet.parentElement.parentElement.nextElementSibling.appendChild(exampleSet);
+                    removeClass(exampleSet, "docblock");
+            } else if (exampleSet.parentElement.tagName === "SECTION") {
+                // top-level function? -- move around, remove toggle.
+                exampleSet.previousElementSibling.remove();
+                // find the next docblock!
+                if (hasClass(exampleSet.nextElementSibling.nextElementSibling, "docblock")) {
+                    exampleSet.nextElementSibling.nextElementSibling.appendChild(exampleSet);
+                }
+            }
             onEach(exampleSet.querySelectorAll(".found-example"), function(example) {
                 var code = example.attributes.getNamedItem("data-code").textContent;
                 var codeLines = code.split("\n");
                 var locs = JSON.parse(example.attributes.getNamedItem("data-locs").textContent);
                 locs = convertLocsStartsToLineOffsets(code, locs);
+
                 var litParent = example.querySelector('.example-wrap pre.rust');
                 var litHtml = litParent.innerHTML.split("\n");
                 onEach(locs, function(loc) {
@@ -3041,11 +3065,38 @@ function defocusSearchBar() {
                         '<span class="highlight" data-loc="'+JSON.stringify(loc).replace(/"/g, "&quot;")+'">');
                 }, true); // do this backwards to avoid shifting later offsets
                 litParent.innerHTML = litHtml.join('\n');
+                var locIndex = 0;
+                if (locs.length > 1) {
+                    example.querySelector('.prev')
+                        .addEventListener('click', function() {
+                            locIndex = (locIndex-1 + locs.length) % locs.length;
+                            scrollToLoc(example, locs[locIndex]);
+                        });
+                    example.querySelector('.next')
+                        .addEventListener('click', function() {
+                            locIndex = (locIndex+1) % locs.length;
+                            scrollToLoc(example, locs[locIndex]);
+                        });
+                } else {
+                    example.querySelector('.prev').remove();
+                    example.querySelector('.next').remove();
+                }
+                example.querySelector('.expand').addEventListener('click', function() {
+                    if (hasClass(example, "expanded")) {
+                        removeClass(example, "expanded");
+                        scrollToLoc(example, locs[0]);
+                    } else {
+                        addClass(example, "expanded");
+                    }
+                });
+                scrollToLoc(example, locs[0]);
             });
         });
     }
-
+    
+    var start = Date.now();
     updateFoundExamples();
+    console.log("updated examples took", Date.now() - start, "ms");
 }());
 
 // This is required in firefox. Explanations: when going back in the history, firefox doesn't re-run

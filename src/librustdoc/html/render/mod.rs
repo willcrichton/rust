@@ -2928,7 +2928,7 @@ fn render_call_locations(w: &mut Buffer, cx: &Context, call_locations: &Option<F
                 Ok(contents) => contents,
                 Err(e) => {
                     eprintln!("Failed to read file {}", e);
-                    return None// Err(Error::new(e, &file));
+                    return None
                 }
             };
             
@@ -2946,7 +2946,7 @@ fn render_call_locations(w: &mut Buffer, cx: &Context, call_locations: &Option<F
         }).collect();
 
         if filtered_locations.len() > 0 {
-            write!(w, "<div class=\"docblock found-example-list\"><h1>Uses found in <code>examples/</code></h1>");
+            write!(w, "<div class=\"docblock found-example-list\"><h1 id=\"found-examples\" class=\"section-header\"><a href=\"#found-examples\">Uses found in <code>examples/</code></a></h1>");
             for (file, contents, locs) in filtered_locations {
                 write!(w, "<div class=\"found-example\" data-code=\"{}\" data-locs=\"{}\">{}<div class=\"code-wrapper\">",
                     contents.replace("\"", "&quot;"),
@@ -2959,6 +2959,8 @@ fn render_call_locations(w: &mut Buffer, cx: &Context, call_locations: &Option<F
                         &cx.shared.playground,
                     ).into_string()
                 );
+                write!(w, "<span class=\"prev\">&pr;</span> <span class=\"next\">&sc;</span>");
+                write!(w, "<span class=\"expand\">&varr;</span>");
                 sources::print_src(w, contents);
                 write!(w, "</div></div>");
             }

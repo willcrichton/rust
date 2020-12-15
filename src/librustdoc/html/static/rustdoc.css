@@ -1724,11 +1724,65 @@ div.name.expand::before {
 
 /* This part is for the new "examples" components */
 
+.found-example:not(.expanded) .code-wrapper pre.line-numbers, .found-example:not(.expanded) .code-wrapper .example-wrap pre.rust {
+	overflow: hidden;
+}
+
+.found-example .code-wrapper .prev {
+	position: absolute;
+	top: 0.25em;
+	right: 2.25em;
+	z-index: 100;
+	cursor: pointer;
+}
+
+.found-example .code-wrapper .next {
+	position: absolute;
+	top: 0.25em;
+	right: 1.25em;
+	z-index: 100;
+	cursor: pointer;
+}
+
+.found-example .code-wrapper .expand {
+	position: absolute;
+	top: 0.25em;
+	right: 0.25em;
+	z-index: 100;
+	cursor: pointer;
+}
+
 .found-example .code-wrapper {
+	position: relative;
 	display: flex; 
 	flex-direction: row; 
 	flex-wrap: wrap;
 	width: 100%;
+}
+
+.found-example:not(.expanded) .code-wrapper:before {
+	content: " ";
+	width: 100%;
+	height: 20px;
+	position: absolute;
+	z-index: 100;
+	top: 0;
+	background: linear-gradient(to bottom, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+}
+
+.found-example:not(.expanded) .code-wrapper:after {
+	content: " ";
+	width: 100%;
+	height: 20px;
+	position: absolute;
+	z-index: 100;
+	bottom: 0;
+	background: linear-gradient(to top, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+}
+
+.found-example:not(.expanded) .code-wrapper {
+	overflow: hidden;
+	height: 240px;
 }
 
 .found-example .code-wrapper .line-numbers {
@@ -1743,12 +1797,14 @@ div.name.expand::before {
 .found-example .code-wrapper .example-wrap {
 	flex: 1;
 	overflow-x: auto;
+	overflow-y: hidden;
 	margin-bottom: 0;
 }
 
 .found-example .code-wrapper .example-wrap pre.rust {
 	overflow-x: inherit;
 	width: inherit;
+	overflow-y: hidden;
 }
 
 .found-example .line-numbers span.highlight {
