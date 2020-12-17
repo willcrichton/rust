@@ -158,6 +158,7 @@ crate struct SharedContext {
     crate edition: Edition,
     crate codes: ErrorCodes,
     playground: Option<markdown::Playground>,
+    repository_url: Option<String>,
 }
 
 impl Context {
@@ -397,6 +398,7 @@ impl FormatRenderer for Context {
             static_root_path,
             generate_search_filter,
             unstable_features,
+            repository_url,
             ..
         } = options;
 
@@ -468,6 +470,7 @@ impl FormatRenderer for Context {
             edition,
             codes: ErrorCodes::from(unstable_features.is_nightly_build()),
             playground,
+            repository_url,
         };
 
         // Add the default themes to the `Vec` of stylepaths
@@ -2923,49 +2926,73 @@ fn render_stability_since(w: &mut Buffer, item: &clean::Item, containing_item: &
 
 fn render_call_locations(w: &mut Buffer, cx: &Context, call_locations: &Option<FnCallLocations>) {
     if let Some(call_locations) = call_locations.as_ref() {
-        let filtered_locations: Vec<_> = call_locations.iter().filter_map(|(file, locs)| {
-            let mut contents = match fs::read_to_string(&file) {
-                Ok(contents) => contents,
-                Err(e) => {
-                    eprintln!("Failed to read file {}", e);
-                    return None
+        let filtered_locations: Vec<_> = call_locations
+            .iter()
+            .filter_map(|(file, locs)| {
+                let mut contents = match fs::read_to_string(&file) {
+                    Ok(contents) => contents,
+                    Err(e) => {
+                        eprintln!("Failed to read file {}", e);
+                        return None;
+                    }
+                };
+
+                // Remove the utf-8 BOM if any
+                if contents.starts_with('\u{feff}') {
+                    contents.drain(..3);
                 }
-            };
-            
-            // Remove the utf-8 BOM if any
-            if contents.starts_with('\u{feff}') {
-                contents.drain(..3);
-            }
 
-            let filtered_locs: Vec<_> = locs.iter().filter(|&&offsets| offsets.0 < contents.len()).collect();
-            if filtered_locs.len() > 0 {
-                Some((file, contents, filtered_locs))
-            } else {
-                None
-            }
-        }).collect();
+                let filtered_locs: Vec<_> =
+                    locs.iter().filter(|&&offsets| offsets.0 < contents.len()).collect();
+                if filtered_locs.len() > 0 { Some((file, contents, filtered_locs)) } else { None }
+            })
+            .collect();
 
-        if filtered_locations.len() > 0 {
-            write!(w, "<div class=\"docblock found-example-list\"><h1 id=\"found-examples\" class=\"section-header\"><a href=\"#found-examples\">Uses found in <code>examples/</code></a></h1>");
-            for (file, contents, locs) in filtered_locations {
-                write!(w, "<div class=\"found-example\" data-code=\"{}\" data-locs=\"{}\">{}<div class=\"code-wrapper\">",
-                    contents.replace("\"", "&quot;"),
-                    serde_json::to_string(&locs).unwrap(),
-                    MarkdownHtml(
-                        &format!("**{}**\n\n", file),
-                        &mut cx.id_map.borrow_mut(),
-                        cx.shared.codes,
-                        cx.shared.edition,
-                        &cx.shared.playground,
-                    ).into_string()
-                );
-                write!(w, "<span class=\"prev\">&pr;</span> <span class=\"next\">&sc;</span>");
-                write!(w, "<span class=\"expand\">&varr;</span>");
-                sources::print_src(w, contents);
-                write!(w, "</div></div>");
-            }
-            write!(w, "</div>");    
+        let n_examples = filtered_locations.len();
+        if n_examples == 0 {
+            return;
         }
+
+        write!(
+            w,
+            "<div class=\"docblock found-example-list\"><h1 id=\"found-examples\" class=\"section-header\"><a href=\"#found-examples\">Uses found in <code>examples/</code></a></h1>"
+        );
+
+        let write_example = |w: &mut Buffer, (file, contents, locs): (&String, String, _)| {
+            let ex_title = match cx.shared.repository_url.as_ref() {
+                Some(url) => format!("[{file}]({url}/{file})", file = file, url = url),
+                None => file.clone(),
+            };
+            write!(
+                w,
+                "<div class=\"found-example\" data-code=\"{}\" data-locs=\"{}\">{}<div class=\"code-wrapper\">",
+                contents.replace("\"", "&quot;"),
+                serde_json::to_string(&locs).unwrap(),
+                MarkdownHtml(
+                    &format!("**{}**\n\n", ex_title),
+                    &mut cx.id_map.borrow_mut(),
+                    cx.shared.codes,
+                    cx.shared.edition,
+                    &cx.shared.playground,
+                )
+                .into_string()
+            );
+            write!(w, "<span class=\"prev\">&pr;</span> <span class=\"next\">&sc;</span>");
+            write!(w, "<span class=\"expand\">&varr;</span>");
+            sources::print_src(w, contents);
+            write!(w, "</div></div>");
+        };
+
+        let mut it = filtered_locations.into_iter();
+        write_example(w, it.next().unwrap());
+
+        if n_examples > 1 {
+            write!(w, "<div class=\"more-found-examples hidden\">");
+            it.for_each(|ex| write_example(w, ex));
+            write!(w, "</div>");
+        }
+
+        write!(w, "</div>");
     }
 }
 

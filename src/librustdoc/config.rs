@@ -262,6 +262,7 @@ crate struct RenderOptions {
     crate document_hidden: bool,
     crate unstable_features: rustc_feature::UnstableFeatures,
     crate call_locations: Option<AllCallLocations>,
+    crate repository_url: Option<String>,
 }
 
 /// Temporary storage for data obtained during `RustdocVisitor::clean()`.
@@ -592,11 +593,34 @@ impl Options {
         let document_hidden = matches.opt_present("document-hidden-items");
         let run_check = matches.opt_present("check");
         let (lint_opts, describe_lints, lint_cap) = get_cmd_lint_options(matches, error_format);
-
-        let call_locations = matches.opt_str("call-locations").map(|path| {
-            let json_data = std::fs::read_to_string(path).unwrap();
-            rustc_serialize::json::decode(&json_data).unwrap()
-        });
+        let repository_url = matches.opt_str("repository-url");
+        let call_locations = match matches.opt_str("call-locations") {
+            Some(path) => Some({
+                let json_data = match std::fs::read_to_string(&path) {
+                    Ok(data) => data,
+                    Err(err) => {
+                        diag.struct_err(&format!(
+                            "--call-locations file `{}` could not be read with error `{}`",
+                            path, err
+                        ))
+                        .emit();
+                        return Err(1);
+                    }
+                };
+                match rustc_serialize::json::decode(&json_data) {
+                    Ok(data) => data,
+                    Err(err) => {
+                        diag.struct_err(
+                            &format!("--call-locations file `{}` could not be parsed as JSON with error `{}`",
+                            path, err)
+                        )
+                        .emit();
+                        return Err(1);
+                    }
+                }
+            }),
+            None => None,
+        };
 
         Ok(Options {
             input,
@@ -652,6 +676,7 @@ impl Options {
                 document_private,
                 document_hidden,
                 call_locations,
+                repository_url,
                 unstable_features: rustc_feature::UnstableFeatures::from_environment(
                     crate_name.as_deref(),
                 ),

@@ -428,7 +428,8 @@ fn opts() -> Vec<RustcOptGroup> {
             )
         }),
         unstable("check", |o| o.optflag("", "check", "Run rustdoc checks")),
-        stable("call-locations", |o| o.optopt("", "call-locations", "TODO", "PATH")),
+        unstable("call-locations", |o| o.optopt("", "call-locations", "", "TODO")),
+        unstable("repository-url", |o| o.optopt("", "repository-url", "", "TODO")),
     ]
 }
 

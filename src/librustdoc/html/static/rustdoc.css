@@ -1814,4 +1814,17 @@ div.name.expand::before {
 
 .found-example .example-wrap .rust span.highlight {
 	background: yellow;
+}	
+
+.more-found-examples {
+	padding-left: 10px;
+	border-left: 1px solid #ccc;
+}
+
+.toggle-examples .collapse-toggle {
+	position: relative;
+}
+
+.toggle-examples a {
+	color: #999 !important; // FIXME(wcrichto): why is important needed
 }
