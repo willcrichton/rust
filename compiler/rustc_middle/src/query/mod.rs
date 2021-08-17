@@ -342,6 +342,16 @@ rustc_queries! {
         }
     }
 
+    query symbols_for_closure_captures(
+        key: (LocalDefId, DefId)
+    ) -> Vec<rustc_span::Symbol> {
+        desc {
+            |tcx| "symbols for captures of closure `{}` in `{}`",
+            tcx.def_path_str(key.1),
+            tcx.def_path_str(key.0.to_def_id())
+        }
+    }
+
     /// MIR after our optimization passes have run. This is MIR that is ready
     /// for codegen. This is also the only query that can fetch non-local MIR, at present.
     query optimized_mir(key: DefId) -> &'tcx mir::Body<'tcx> {
@@ -1251,9 +1261,6 @@ rustc_queries! {
     /// crate, returning `None` if there is no entry point (such as for library crates).
     query entry_fn(_: ()) -> Option<(DefId, EntryFnType)> {
         desc { "looking up the entry function of a crate" }
-    }
-    query plugin_registrar_fn(_: ()) -> Option<LocalDefId> {
-        desc { "looking up the plugin registrar for a crate" }
     }
     query proc_macro_decls_static(_: ()) -> Option<LocalDefId> {
         desc { "looking up the derive registrar for a crate" }

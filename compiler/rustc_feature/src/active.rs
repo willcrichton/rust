@@ -281,9 +281,6 @@ declare_features! (
     // feature-group-start: actual feature gates
     // -------------------------------------------------------------------------
 
-    /// Allows using `#[plugin_registrar]` on functions.
-    (active, plugin_registrar, "1.0.0", Some(29597), None),
-
     /// Allows using `#![plugin(myplugin)]`.
     (active, plugin, "1.0.0", Some(29597), None),
 
@@ -684,6 +681,9 @@ declare_features! (
 
     /// Allows explicit generic arguments specification with `impl Trait` present.
     (active, explicit_generic_args_with_impl_trait, "1.56.0", Some(83701), None),
+
+    /// Allows using doc(primitive) without a future-incompat warning
+    (active, doc_primitive, "1.56.0", Some(88070), None),
 
     // -------------------------------------------------------------------------
     // feature-group-end: actual feature gates

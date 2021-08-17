@@ -1605,7 +1605,7 @@ declare_lint! {
     Warn,
     "suggest using `dyn Trait` for trait objects",
     @future_incompatible = FutureIncompatibleInfo {
-        reference: "issue #80165 <https://github.com/rust-lang/rust/issues/80165>",
+        reference: "<https://doc.rust-lang.org/nightly/edition-guide/rust-2021/warnings-promoted-to-error.html>",
         reason: FutureIncompatibilityReason::EditionError(Edition::Edition2021),
     };
 }
@@ -2469,6 +2469,38 @@ declare_lint! {
 }
 
 declare_lint! {
+    /// The `named_asm_labels` lint detects the use of named labels in the
+    /// inline `asm!` macro.
+    ///
+    /// ### Example
+    ///
+    /// ```rust,compile_fail
+    /// fn main() {
+    ///     unsafe {
+    ///         asm!("foo: bar");
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// {{produces}}
+    ///
+    /// ### Explanation
+    ///
+    /// LLVM is allowed to duplicate inline assembly blocks for any
+    /// reason, for example when it is in a function that gets inlined. Because
+    /// of this, GNU assembler [local labels] *must* be used instead of labels
+    /// with a name. Using named labels might cause assembler or linker errors.
+    ///
+    /// See the [unstable book] for more details.
+    ///
+    /// [local labels]: https://sourceware.org/binutils/docs/as/Symbol-Names.html#Local-Labels
+    /// [unstable book]: https://doc.rust-lang.org/nightly/unstable-book/library-features/asm.html#labels
+    pub NAMED_ASM_LABELS,
+    Deny,
+    "named labels in inline assembly",
+}
+
+declare_lint! {
     /// The `unsafe_op_in_unsafe_fn` lint detects unsafe operations in unsafe
     /// functions without an explicit unsafe block.
     ///
@@ -2690,6 +2722,38 @@ declare_lint! {
 }
 
 declare_lint! {
+    /// The `undefined_naked_function_abi` lint detects naked function definitions that
+    /// either do not specify an ABI or specify the Rust ABI.
+    ///
+    /// ### Example
+    ///
+    /// ```rust
+    /// #![feature(naked_functions)]
+    /// #![feature(asm)]
+    ///
+    /// #[naked]
+    /// pub fn default_abi() -> u32 {
+    ///     unsafe { asm!("", options(noreturn)); }
+    /// }
+    ///
+    /// #[naked]
+    /// pub extern "Rust" fn rust_abi() -> u32 {
+    ///     unsafe { asm!("", options(noreturn)); }
+    /// }
+    /// ```
+    ///
+    /// {{produces}}
+    ///
+    /// ### Explanation
+    ///
+    /// The Rust ABI is currently undefined. Therefore, naked functions should
+    /// specify a non-Rust ABI.
+    pub UNDEFINED_NAKED_FUNCTION_ABI,
+    Warn,
+    "undefined naked function ABI"
+}
+
+declare_lint! {
     /// The `unsupported_naked_functions` lint detects naked function
     /// definitions that are unsupported but were previously accepted.
     ///
@@ -2699,7 +2763,7 @@ declare_lint! {
     /// #![feature(naked_functions)]
     ///
     /// #[naked]
-    /// pub fn f() -> u32 {
+    /// pub extern "C" fn f() -> u32 {
     ///     42
     /// }
     /// ```
@@ -2956,6 +3020,7 @@ declare_lint_pass! {
         INLINE_NO_SANITIZE,
         BAD_ASM_STYLE,
         ASM_SUB_REGISTER,
+        NAMED_ASM_LABELS,
         UNSAFE_OP_IN_UNSAFE_FN,
         INCOMPLETE_INCLUDE,
         CENUM_IMPL_DROP_CAST,
@@ -3215,7 +3280,7 @@ declare_lint! {
     Allow,
     "detects usage of old versions of or-patterns",
     @future_incompatible = FutureIncompatibleInfo {
-        reference: "issue #84869 <https://github.com/rust-lang/rust/issues/84869>",
+        reference: "<https://doc.rust-lang.org/nightly/edition-guide/rust-2021/or-patterns-macro-rules.html>",
         reason: FutureIncompatibilityReason::EditionError(Edition::Edition2021),
     };
 }
@@ -3264,7 +3329,7 @@ declare_lint! {
     "detects the usage of trait methods which are ambiguous with traits added to the \
         prelude in future editions",
     @future_incompatible = FutureIncompatibleInfo {
-        reference: "issue #85684 <https://github.com/rust-lang/rust/issues/85684>",
+        reference: "<https://doc.rust-lang.org/nightly/edition-guide/rust-2021/prelude.html>",
         reason: FutureIncompatibilityReason::EditionError(Edition::Edition2021),
     };
 }
@@ -3299,7 +3364,7 @@ declare_lint! {
     Allow,
     "identifiers that will be parsed as a prefix in Rust 2021",
     @future_incompatible = FutureIncompatibleInfo {
-        reference: "issue #84978 <https://github.com/rust-lang/rust/issues/84978>",
+        reference: "<https://doc.rust-lang.org/nightly/edition-guide/rust-2021/reserving-syntax.html>",
         reason: FutureIncompatibilityReason::EditionError(Edition::Edition2021),
     };
     crate_level_only
