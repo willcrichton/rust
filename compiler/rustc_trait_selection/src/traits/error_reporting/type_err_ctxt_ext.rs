@@ -1291,6 +1291,9 @@ impl<'tcx> InferCtxtPrivExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
 
     #[instrument(skip(self), level = "debug")]
     fn report_fulfillment_error(&self, error: &FulfillmentError<'tcx>) {
+        if let Some(fulfillment_errors) = &self.fulfillment_errors {
+            fulfillment_errors.borrow_mut().push(error.clone());
+        }
         if self.tcx.sess.opts.unstable_opts.dump_solver_proof_tree == DumpSolverProofTree::OnError {
             dump_proof_tree(&error.root_obligation, self.infcx);
         }

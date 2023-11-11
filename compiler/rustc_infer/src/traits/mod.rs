@@ -117,6 +117,7 @@ pub type PredicateObligations<'tcx> = Vec<PredicateObligation<'tcx>>;
 
 pub type Selection<'tcx> = ImplSource<'tcx, PredicateObligation<'tcx>>;
 
+#[derive(Clone)]
 pub struct FulfillmentError<'tcx> {
     pub obligation: PredicateObligation<'tcx>,
     pub code: FulfillmentErrorCode<'tcx>,

@@ -45,7 +45,7 @@ mod writeback;
 pub use fn_ctxt::FnCtxt;
 pub use inherited::Inherited;
 
-use crate::check::check_fn;
+pub use crate::check::check_fn;
 use crate::coercion::DynamicCoerceMany;
 use crate::diverges::Diverges;
 use crate::expectation::Expectation;
@@ -301,7 +301,7 @@ fn typeck_with_fallback<'tcx>(
 /// When `check_fn` is invoked on a coroutine (i.e., a body that
 /// includes yield), it returns back some information about the yield
 /// points.
-struct CoroutineTypes<'tcx> {
+pub struct CoroutineTypes<'tcx> {
     /// Type of coroutine argument / values returned by `yield`.
     resume_ty: Ty<'tcx>,
 

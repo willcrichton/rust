@@ -25,7 +25,7 @@ use rustc_trait_selection::traits::{ObligationCause, ObligationCauseCode};
 /// * ...
 /// * inherited: other fields inherited from the enclosing fn (if any)
 #[instrument(skip(fcx, body), level = "debug")]
-pub(super) fn check_fn<'a, 'tcx>(
+pub fn check_fn<'a, 'tcx>(
     fcx: &mut FnCtxt<'a, 'tcx>,
     fn_sig: ty::FnSig<'tcx>,
     decl: &'tcx hir::FnDecl<'tcx>,

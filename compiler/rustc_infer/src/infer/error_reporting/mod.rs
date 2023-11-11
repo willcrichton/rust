@@ -54,8 +54,8 @@ use crate::infer;
 use crate::infer::error_reporting::nice_region_error::find_anon_type::find_anon_type;
 use crate::infer::ExpectedFound;
 use crate::traits::{
-    IfExpressionCause, MatchExpressionArmCause, ObligationCause, ObligationCauseCode,
-    PredicateObligation,
+    FulfillmentError, IfExpressionCause, MatchExpressionArmCause, ObligationCause,
+    ObligationCauseCode, PredicateObligation,
 };
 
 use rustc_data_structures::fx::{FxIndexMap, FxIndexSet};
@@ -121,6 +121,7 @@ fn escape_literal(s: &str) -> String {
 pub struct TypeErrCtxt<'a, 'tcx> {
     pub infcx: &'a InferCtxt<'tcx>,
     pub typeck_results: Option<std::cell::Ref<'a, ty::TypeckResults<'tcx>>>,
+    pub fulfillment_errors: Option<std::rc::Rc<std::cell::RefCell<Vec<FulfillmentError<'tcx>>>>>,
     pub fallback_has_occurred: bool,
 
     pub normalize_fn_sig: Box<dyn Fn(ty::PolyFnSig<'tcx>) -> ty::PolyFnSig<'tcx> + 'a>,

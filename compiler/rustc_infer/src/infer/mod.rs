@@ -737,6 +737,7 @@ impl<'tcx> InferCtxt<'tcx> {
         TypeErrCtxt {
             infcx: self,
             typeck_results: None,
+            fulfillment_errors: None,
             fallback_has_occurred: false,
             normalize_fn_sig: Box::new(|fn_sig| fn_sig),
             autoderef_steps: Box::new(|ty| {

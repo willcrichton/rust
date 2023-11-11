@@ -308,7 +308,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         result
     }
 
-    pub(in super::super) fn normalize<T>(&self, span: Span, value: T) -> T
+    pub fn normalize<T>(&self, span: Span, value: T) -> T
     where
         T: TypeFoldable<TyCtxt<'tcx>>,
     {

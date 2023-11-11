@@ -14,6 +14,7 @@ use rustc_hir_analysis::astconv::AstConv;
 use rustc_infer::infer;
 use rustc_infer::infer::error_reporting::TypeErrCtxt;
 use rustc_infer::infer::type_variable::{TypeVariableOrigin, TypeVariableOriginKind};
+use rustc_infer::traits::FulfillmentError;
 use rustc_middle::infer::unify_key::{ConstVariableOrigin, ConstVariableOriginKind};
 use rustc_middle::ty::{self, Const, Ty, TyCtxt, TypeVisitableExt};
 use rustc_session::Session;
@@ -23,6 +24,7 @@ use rustc_trait_selection::traits::{ObligationCause, ObligationCauseCode, Obliga
 
 use std::cell::{Cell, RefCell};
 use std::ops::Deref;
+use std::rc::Rc;
 
 /// The `FnCtxt` stores type-checking context needed to type-check bodies of
 /// functions, closures, and `const`s, including performing type inference
@@ -109,6 +111,8 @@ pub struct FnCtxt<'a, 'tcx> {
     pub(super) inh: &'a Inherited<'tcx>,
 
     pub(super) fallback_has_occurred: Cell<bool>,
+
+    pub fulfillment_errors: Rc<RefCell<Vec<FulfillmentError<'tcx>>>>,
 }
 
 impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
@@ -131,6 +135,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             }),
             inh,
             fallback_has_occurred: Cell::new(false),
+            fulfillment_errors: Default::default(),
         }
     }
 
@@ -154,6 +159,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     pub fn err_ctxt(&'a self) -> TypeErrCtxt<'a, 'tcx> {
         TypeErrCtxt {
             infcx: &self.infcx,
+            fulfillment_errors: Some(Rc::clone(&self.fulfillment_errors)),
             typeck_results: Some(self.typeck_results.borrow()),
             fallback_has_occurred: self.fallback_has_occurred.get(),
             normalize_fn_sig: Box::new(|fn_sig| {
